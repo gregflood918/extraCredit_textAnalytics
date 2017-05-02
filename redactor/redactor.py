@@ -18,6 +18,9 @@ from nltk.corpus import wordnet
 import codecs
 import os
 from nltk import word_tokenize, pos_tag, ne_chunk
+from nltk.stem import WordNetLemmatizer
+
+
 
 
 
@@ -80,6 +83,30 @@ def redactPlaces(myString):
             myString = redactWord(myString, wordList)           
     return(myString)
     
+
+
+    
+#Function that will redact ideas/themes form the text.  The approach
+#is to find the synonyms using wordnet for the idea.  Then each idea
+#will be Lemmatized, getting it to its root word.  Next, the html/txt
+#string will be tokenized, storing the unique tokens in a set.  This 
+#set will be used to create a dictionary where the key is the lemmatized
+#version of each token, and the value is the token itself.  Then, the 
+#synonyms will be compared to the set, to see if they  are contained within.
+#if they are, they will be mapped to the word form the text, and subsequently
+#fed into the redactWord() function
+def redactIdeas(myString,idea):
+    wn = WordNetLemmatizer()
+    tokens = word_tokenize(myString)
+    token_keys = [wn.lemmatize(i) for i in tokens]
+    word_dict = dict(zip(token_keys,tokens))
+    #Now that we have a dictionary of lemmatized words to actual words,
+    #We can use wordnet to find synonyms.  This will suffice for finding
+    #words that fit within an "idea"
+    
+
+
+
     
       
 #Utility function that converts the redacted string representation of
@@ -177,6 +204,37 @@ if len(htmlFile) > 0 :
 #    for tag in tags:
 #        if tag[1]=='PERSON': print tag
 #
+
+
+
+'''
+zipping up a dictionary
+
+keys = ['a', 'b', 'c']
+>>> values = [1, 2, 3]
+>>> dictionary = dict(zip(keys, values))
+>>> print(dictionary)
+
+
+So we need to lemmatize each of the synonyms from wordnet
+
+Then we need tokenize the html/txt
+
+We need to make a set of the tokenized html/txt
+
+
+Then we need to create a dictionary with keys as lemmatization of tokens
+from html/txt and values as the tokens themselves 
+
+Then iterate throgh each of the synonyms, checking if the set contains
+the lemma of the synoym.  If it does, then get the word from the key
+value map, the remove that word
+
+Then we need to return
+
+
+''''
+
 
 
 
