@@ -29,15 +29,13 @@ from bs4 import BeautifulSoup
 
 
 #Censorship dictionary:  Each time a specfic censorship activity takes place,
-#we will increment the appropriate spot in the dictionary.  
+#we will increment the appropriate spot in the dictionary.  This will be
+#used for the stats argument
+
+myKeys=['names','genders','dates','places','addresses','phones','concept']
+censorship_dict={key: 0 for key in myKeys}
 
 
-
-def censor(text, word):
-    return ' '.join([('*' * len(word)) if x == word else x for x in text.split()])
-
-def censor2(text, word):
-           return text.replace(word, ("*"*len(word)))
            
 
 #Function that automatically scans the current directory, looking for
@@ -67,6 +65,7 @@ def redactSentence(myString,redact):
     for i in range(len(sentences)):
         if re.search(pattern,sentences[i]):
             sentences[i] = '*****'
+            censorship_dict['concepts']+=1
     myString = ' '.join(sentences) #Might slightly alter format, but meh 
     return myString
             
@@ -83,7 +82,8 @@ def redactNames(myString):
         if type(branch) is nltk.Tree and branch.label()=='PERSON':
             wordList = [i[0] for i in branch]
             wordList = ' '.join(wordList)
-            myString = redactWord(myString, wordList)           
+            myString = redactWord(myString, wordList)
+            censorship_dict['names']+=1
     return(myString)
     
  
@@ -98,7 +98,8 @@ def redactPlaces(myString):
         if type(branch) is nltk.Tree and branch.label()=='GPE':
             wordList = [i[0] for i in branch]
             wordList = ' '.join(wordList)
-            myString = redactWord(myString, wordList)           
+            myString = redactWord(myString, wordList)
+            censorship_dict['places']+=1
     return(myString)
     
 
@@ -133,23 +134,43 @@ def redactIdeas(myString,idea):
 #number of area codes in the United States     
 def redactPhoneNum(myString):
     pattern = re.compile(r'(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}')
+    censorship_dict['phones']+=len(re.findall(pattern, myString)) #get counts
     myString = re.sub(pattern,'*',myString)
     return myString
     
 
 #Very simple function that will iterate through a list of gender specfic 
-#words and pronouns, redacting each sequentially.  We also directly 
-#substitue for the sequence, rather than searching for the standalone word
-#(which we do if we use redactWord() function).  This way, we can handle
-#apostrophes and possesion (himself and herself)   
+#words and pronouns, redacting each sequentially. 
 def redactGenders(myString):
-    female = ['female','girl','woman','her','she','her']
-    male = ['male','boy','man','his','him']
+    female = ['female','girl','woman','her','she','her','women']
+    male = ['male','boy','man','his','him','men','he']
     for i in female:
-        myString = myString.replace(i,'*')
+        pattern = re.compile(r'(?<=\W)'+re.escape(i)+'(?=\W)',re.IGNORECASE)
+        censorship_dict['genders']+=len(re.findall(i, myString))
+        myString = re.sub(pattern,'*',myString)
+        print(myString)
     for i in male:
-        myString = myString.replace(i,'*')
+        pattern = re.compile(r'(?<=\W)'+re.escape(i)+'(?=\W)',re.IGNORECASE)
+        #pattern = re.compile(r'(?<=[^|\W+])'+re.escape(i)+'(\W+|$)',re.IGNORECASE)
+        censorship_dict['genders']+=len(re.findall(i, myString))
+        myString = re.sub(pattern,'*',myString)
+        print(myString)
     return myString
+    
+#Function to redact dates of the following formats:
+#dd/mm/yyyy,dd-mm-yyyy dd.mm.yyyy where each day and month
+#can be reduced to a single digit, and the year can be reduced to 2 digits
+#These regular expressions were taken from Stack Overflow:
+#http://stackoverflow.com/questions/15491894/regex-to-validate-date-format-dd-mm-yyyy    
+def redactDates(myString):  
+    pattern = re.compile(r'[0-9]{1,2}(\/|-|\.)[0-9]{1,2}(\/|-|\.)[0-9]{2,4}')
+    censorship_dict['dates']+=len(re.findall(pattern,myString))
+    myString = re.sub(pattern,'*',myString)
+
+    return myString
+
+def redactAddresses(myString):
+    retur
     
     
 #Utility function that converts the redacted string representation of
