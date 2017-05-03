@@ -28,6 +28,11 @@ from bs4 import BeautifulSoup
 
 
 
+#Censorship dictionary:  Each time a specfic censorship activity takes place,
+#we will increment the appropriate spot in the dictionary.  
+
+
+
 def censor(text, word):
     return ' '.join([('*' * len(word)) if x == word else x for x in text.split()])
 
@@ -52,6 +57,19 @@ def redactWord(myString, redact):
     myString = re.sub(pattern,'*',myString)
     return myString
     
+
+#Utility function that will substitute 5 asteriks for a sentence if the 
+#sentence contains a concept.  This is only used in the remove concept
+#argument   
+def redactSentence(myString,redact):
+    sentences = nltk.sent_tokenize(myString)
+    pattern = re.compile(r'(?<=\W)'+re.escape(redact)+'(?=\W)',re.IGNORECASE)
+    for i in range(len(sentences)):
+        if re.search(pattern,sentences[i]):
+            sentences[i] = '*****'
+    myString = ' '.join(sentences) #Might slightly alter format, but meh 
+    return myString
+            
  
 #Functiont that will determine the named entities in a passed string
 #and call redact words sequentially on the human names, substituting 
@@ -84,8 +102,6 @@ def redactPlaces(myString):
     return(myString)
     
 
-
-    
 #Function that will redact ideas/themes form the text.  The approach
 #is to find the synonyms using wordnet for the idea.  Then each idea
 #will be Lemmatized, getting it to its root word.  Next, the html/txt
@@ -103,12 +119,39 @@ def redactIdeas(myString,idea):
     #Now that we have a dictionary of lemmatized words to actual words,
     #We can use wordnet to find synonyms.  This will suffice for finding
     #words that fit within an "idea"
+    synonyms = wordnet.synsets(idea)
+    synonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+    for word in synonyms:
+        if word in word_dict.keys():
+            actualWord = word_dict[word]
+            myString = redactSentence(myString,actualWord)
+    return myString
+
+
+#Function to replace 10 digit phone numbers with an asterik.  We will
+#assume that a 7 digit phone number is sufficiently anonymous given the
+#number of area codes in the United States     
+def redactPhoneNum(myString):
+    pattern = re.compile(r'(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}')
+    myString = re.sub(pattern,'*',myString)
+    return myString
     
 
-
-
+#Very simple function that will iterate through a list of gender specfic 
+#words and pronouns, redacting each sequentially.  We also directly 
+#substitue for the sequence, rather than searching for the standalone word
+#(which we do if we use redactWord() function).  This way, we can handle
+#apostrophes and possesion (himself and herself)   
+def redactGenders(myString):
+    female = ['female','girl','woman','her','she','her']
+    male = ['male','boy','man','his','him']
+    for i in female:
+        myString = myString.replace(i,'*')
+    for i in male:
+        myString = myString.replace(i,'*')
+    return myString
     
-      
+    
 #Utility function that converts the redacted string representation of
 #the html file to a beautiful soup object, writes the object to a temporary
 #.txt file, then uses the cupsfiler gnu utility to convert the .txt
@@ -233,7 +276,7 @@ value map, the remove that word
 Then we need to return
 
 
-''''
+ '''
 
 
 
@@ -274,7 +317,7 @@ synonyms = wordnet.synsets('change')
 
 or.....
 for ss in wn.synsets('small'):
->>>     print(ss.name(), ss.lemma_names())
+    print(ss.name(), ss.lemma_names())
 '''
 
 '''
