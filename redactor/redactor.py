@@ -57,7 +57,7 @@ def redactSentence(myString,redact):
     for i in range(len(sentences)):
         if re.search(pattern,sentences[i]):
             sentences[i] = '*****'
-            censorship_dict['concepts']+=1
+            censorship_dict['concept']+=1
     myString = ' '.join(sentences) #Might slightly alter format, but meh 
     return myString
             
@@ -114,9 +114,11 @@ def redactIdeas(myString,idea):
     #words that fit within an "idea"
     synonyms = wordnet.synsets(idea)
     synonyms = set(chain.from_iterable([word.lemma_names() for word in synonyms]))
+    synonyms.add(idea)
     for word in synonyms:
         if word in word_dict.keys():
             actualWord = word_dict[word]
+            print(actualWord)
             myString = redactSentence(myString,actualWord)
     return myString
 
@@ -260,6 +262,8 @@ parser.add_argument('--places',action='store_true',help='redact places')
 parser.add_argument('--addresses',action='store_true',help='redact addresses')
 parser.add_argument('--concept',nargs='+',action='append',help='redact terms\
  related to specified concept')
+parser.add_argument('--output',nargs='+',action='append',help='redact terms\
+ related to specified concept')
 parser.add_argument('--stats',help='output summary of \
 redaction process')
 
@@ -273,6 +277,7 @@ args = parser.parse_args()
 fileNames = []
 txtFiles = []
 htmlFiles = []
+outputFiles = []
 for j in args.input:
     for i in j:
         if i.endswith('.html'):
@@ -280,46 +285,96 @@ for j in args.input:
         elif i.endswith('.txt'):
             txtFiles.extend(globber(i))
         fileNames.extend(globber(i))
-print(htmlFiles)
-print(txtFiles)
+
+#If no outputs, write files to current working directory.
+#Make directory if input doesnt include a /
+if args.output:        
+    for j in args.output:
+        outputFiles.extend(j)
+
     
 #Extracting the concepts to censor
 concepts = []
-for j in args.concept:
+for j in args.concept:  # This is a place for a possible mistake
     concepts.extend(j)
-print(concepts)
+
+#Extracting the places to write statistics:
+stats = []
+if args.stats:
+    for j in args.stats:
+        stats.extend(j)
 
 
 #Dealing with html files
-if len(htmlFile) > 0 :
-    for file in htmlFile:       
-        f = codex.open(file,'r','utf-8')
-        contents = f.read()
-        f.close
+if len(htmlFiles) > 0 :
+    for file in htmlFiles:       
+        current_file = readHtml(file) #Html as a string       
+        #Sequentially apply redactions
+        if len(concepts) > 0:
+            for con in concepts:
+                current_file = redactIdeas(current_file,str(con))      
+        if args.names:
+            current_file = redactNames(current_file)
+        if args.dates:
+            current_file = redactDates(current_file)
+        if args.phones:
+            current_file = redactPhoneNum(current_file)
+        if args.genders:
+            current_file = redactGenders(current_file)
+        if args.addresses:
+            current_file = redactAddresses(current_file)
+        if args.places:
+            current_file = redactPlaces(current_file)
+        #Convert to pdf
+        for i in outputFiles: 
+            if i[-1] == '/' and not os.path.isdir(i):
+                os.system('mkdir '+ i[:-1])
+            elif i[-1] != '/' and not os.path.isdir(i):
+                os.system('mkdir '+ i)
+                i = i+'/'
+            elif i[-1] != '/' and os.path.isdir(i):
+                i = i+'/'
+            outputLocation = str(i) + file[:-5] #trim off html
+            writeHtml(current_file,outputLocation)
+        
+#Dealing with html files
+if len(txtFiles) > 0 :
+    for file in txtFiles:       
+        current_file = readTxt(file) #Html as a string
+        
+        #Sequentially apply redactions
+        if len(concepts) > 0:
+            for con in concepts:
+                current_file = redactIdeas(current_file,str(con))      
+        if args.names:
+            current_file = redactNames(current_file)
+        if args.dates:
+            current_file = redactDates(current_file)
+        if args.phones:
+            current_file = redactPhoneNum(current_file)
+        if args.genders:
+            current_file = redactGenders(current_file)
+        if args.addresses:
+            current_file = redactAddresses(current_file)
+        if args.places:
+            current_file = redactPlaces(current_file)   
+        #Convert to pdf    
+        for i in outputFiles: 
+            if i[-1] == '/' and not os.path.isdir(i):
+                os.system('mkdir '+ i[:-1])
+            elif i[-1] != '/' and not os.path.isdir(i):
+                os.system('mkdir '+ i)
+                i = i+'/'
+            elif i[-1] != '/' and os.path.isdir(i):
+                i = i+'/'
+            outputLocation = str(i) + file[:-4] #trim off html
+            writeTxt(current_file,outputLocation)
 
-
-            
-
-
-#Note, html files will first be read in as a string using codecs.  This is
-#where all substitution shall occur.  When redacting is complete, the file
-#is writen using prettify
-
-
-
-
-
-#mport nltk
-#from nltk.tag.stanford import NERTagger
-#st = NERTagger('stanford-ner/all.3class.distsim.crf.ser.gz', 'stanford-ner/stanford-ner.jar')
-#text = """YOUR TEXT GOES HERE"""
-
-#for sent in nltk.sent_tokenize(text):
-#    tokens = nltk.tokenize.word_tokenize(sent)
-#    tags = st.tag(tokens)
-#    for tag in tags:
-#        if tag[1]=='PERSON': print tag
-#
+#Write summary statistics
+if len(stats)>0:
+    for s in stats:
+        writeStats(s)
+           
 
 
 
