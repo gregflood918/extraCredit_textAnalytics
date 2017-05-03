@@ -19,11 +19,6 @@ import codecs
 import os
 from nltk import word_tokenize, pos_tag, ne_chunk
 from nltk.stem import WordNetLemmatizer
-
-
-
-
-
 from bs4 import BeautifulSoup
 
 
@@ -31,12 +26,9 @@ from bs4 import BeautifulSoup
 #Censorship dictionary:  Each time a specfic censorship activity takes place,
 #we will increment the appropriate spot in the dictionary.  This will be
 #used for the stats argument
-
 myKeys=['names','genders','dates','places','addresses','phones','concept']
 censorship_dict={key: 0 for key in myKeys}
 
-
-           
 
 #Function that automatically scans the current directory, looking for
 #the specified file extensions.  The file extension must have the suffix
@@ -157,22 +149,54 @@ def redactGenders(myString):
         print(myString)
     return myString
     
+    
 #Function to redact dates of the following formats:
 #dd/mm/yyyy,dd-mm-yyyy dd.mm.yyyy where each day and month
 #can be reduced to a single digit, and the year can be reduced to 2 digits
-#These regular expressions were taken from Stack Overflow:
-#http://stackoverflow.com/questions/15491894/regex-to-validate-date-format-dd-mm-yyyy    
+#Also matches dates of the form January, XX, XXXX   
 def redactDates(myString):  
     pattern = re.compile(r'[0-9]{1,2}(\/|-|\.)[0-9]{1,2}(\/|-|\.)[0-9]{2,4}')
+    pattern2 = re.compile(r'[January|February|March|April|May|June|July|'
+                             'August|September|October|November|December] '
+                             '[0-9]{1,2}[\s|,]{0,1} [0-9]{4}')
     censorship_dict['dates']+=len(re.findall(pattern,myString))
+    censorship_dict['dates']+=len(re.findall(pattern2,myString))
     myString = re.sub(pattern,'*',myString)
-
+    myString = re.sub(pattern2,'*',myString)
     return myString
 
+    
+
+#Function to redact dates of the following format:
+#800 SE 20 AVENUE #603, DEERFIELD BEACH    
+#The regex below is slightly altered from a regex found on stack
+#exchange: http://stackoverflow.com/questions/9397485/regex-street-address-match
 def redactAddresses(myString):
-    retur
+    pattern = re.compile(r'\s*([0-9]*)\s((NW|SW|SE|NE|S|N|E|W))?(.*)'
+                               '((NW|SW|SE|NE|S|N|E|W))?((#|APT|BSMT|'
+'BLDG|DEPT|FL|FRNT|HNGR|KEY|LBBY|LOT|LOWR|OFC|PH|PIER|REAR|RM|SIDE|SLIP|'
+'SPC|STOP|STE|TRLR|UNIT|UPPR|ST|PL|\,)[^,]*)(\,)([\s\w]*)')
+    censorship_dict['addresses']+=len(re.findall(pattern,myString))
+    myString = re.sub(pattern,'*',myString)                         
+    return myString
     
+
+#Reads in an html file to a single string to return
+def readHtml(htmlFile):
+    f = codecs.open(htmlFile,'r','utf-8')
+    contents = f.read()
+    f.close
+    return contents
+
+
+#Reads in a .txt file to a single string to return
+def readTxt(txtFile):
+    f = codecs.open(txtFile, 'r','utf-8')
+    contents = f.read()
+    f.close
+    return contents
     
+      
 #Utility function that converts the redacted string representation of
 #the html file to a beautiful soup object, writes the object to a temporary
 #.txt file, then uses the cupsfiler gnu utility to convert the .txt
@@ -183,15 +207,47 @@ def writeHtml(htmlString,fileName):
     fileName = str(fileName)+".pdf"
     with open("temp.txt","wb") as file:
         file.write(html)
+        file.close()
     #convert to pdf and clean up .txt
-    os.system('cupsfilter temp.txt ' + str(fileName))
+    os.system('cupsfilter temp.txt >' + str(fileName))
     os.system('rm temp.txt')
     return
     
 
+#Function that will write the redaction statistics to the specified 
+#location. The statistics consist of the number of redactions in the order
+#show.  Note that there is overlap between redactions: editing a concept 
+#removes entire sentences that might contain other terms that would be
+#redacted via other flags.  So this number will change for each individual
+#component depending on which arguments are passed    
+def writeStats(location):
+    output = 'Statistical Summary\nThe number or redactions in each category are listed below:\n'
+    for j in myKeys:
+        output += str(j) + ': ' + str(censorship_dict[j]) + '\n'
+    location = location.lower()
+    if location == 'stderr':
+        sys.stderr.write(output)
+    elif location == 'stdout':
+        sys.stdout.write(output)
+    else:
+        with open(str(location)+'.txt',"w") as file:
+            file.write(output)
+            file.close()
+        
+        
+#Utility function that converts the writes the redacted string representation
+#of a temporary .txt file, and then writes it to a pdf
+def writeTxt(txtString, fileName):
+    fileName = str(fileName)+".pdf"
+    with open("temp.txt","w") as file:
+        file.write(txtString)
+        file.close()
+        #convert to pdf and clean up .txt
+    os.system('cupsfilter temp.txt >' + str(fileName))
+    os.system('rm temp.txt')
+    return
     
-    
-    
+
 
 #creating arguments to parse
 parser = argparse.ArgumentParser()
@@ -234,13 +290,9 @@ for j in args.concept:
 print(concepts)
 
 
-
-
-
 #Dealing with html files
 if len(htmlFile) > 0 :
-    for file in htmlFile:
-        
+    for file in htmlFile:       
         f = codex.open(file,'r','utf-8')
         contents = f.read()
         f.close
