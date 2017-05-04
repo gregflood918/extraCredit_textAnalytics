@@ -83,9 +83,7 @@ def redactNames(myString):
     for branch in ne_tree:
         if type(branch) is nltk.Tree and branch.label()=='PERSON':
             wordList = [i[0] for i in branch]
-            print(wordList)
             wordList = ' '.join(wordList)
-            print(wordList)
             myString = redactWord(myString, wordList)
             censorship_dict['names']+=1
     return(myString)
@@ -284,8 +282,9 @@ def runScript(args):
         
     #Extracting the concepts to censor
     concepts = []
-    for j in args.concept:  # This is a place for a possible mistake
-        concepts.extend(j)
+    if args.concept:
+        for j in args.concept:  # This is a place for a possible mistake
+            concepts.extend(j)
     
     
     #Dealing with html files
@@ -354,96 +353,7 @@ def runScript(args):
                 writeTxt(current_file,outputLocation)
     
     #Write summary statistics
-    writeStats(args.stats)
+    if args.stats:
+        writeStats(args.stats)
                
-    
-    
-    
-    '''
-    zipping up a dictionary
-    
-    keys = ['a', 'b', 'c']
-    >>> values = [1, 2, 3]
-    >>> dictionary = dict(zip(keys, values))
-    >>> print(dictionary)
-    
-    
-    So we need to lemmatize each of the synonyms from wordnet
-    
-    Then we need tokenize the html/txt
-    
-    We need to make a set of the tokenized html/txt
-    
-    
-    Then we need to create a dictionary with keys as lemmatization of tokens
-    from html/txt and values as the tokens themselves 
-    
-    Then iterate throgh each of the synonyms, checking if the set contains
-    the lemma of the synoym.  If it does, then get the word from the key
-    value map, the remove that word
-    
-    Then we need to return
-    
-    
-     '''
-    
-    
-    
-    
-    
-    '''
-    htmlDoc.close()
-    
-    html = soup.prettify("utf-8")
-    with open("output.html", "wb") as file:
-        file.write(html)
-        '''
-    
-        
-    '''
-    Codecs  - How to convert from html to pdf
-    
-       f = codecs.open("schools.html", 'r', 'utf-8') 
-       j = f.read() 
-       f.close()
-       j = redactWords(j,'word')
-       k = BeautifulSoup(j,'html.parser')
-       html = k.prettify("utf-8")
-       with open("output3.txt", "wb") as file:
-        file.write(html)
-        
-    os.system('cupsfilter output4.txt > output4.pdf')
-    os.system('rm output4.txt')    
-        
-    '''    
-    
-    
-    '''
-    Using Wordnet 
-    
-    synonyms = wordnet.synsets('change')
-    >>> set(chain.from_iterable([word.lemma_names() for word in synonyms]))
-    
-    or.....
-    for ss in wn.synsets('small'):
-        print(ss.name(), ss.lemma_names())
-    '''
-    
-    '''
-    How we handle multiples of the same input....
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("square", type=int,
-                        help="display the square of a given number")
-    parser.add_argument("-v", "--verbosity", action="count",
-                        help="increase output verbosity")
-    args = parser.parse_args()
-    answer = args.square**2
-    if args.verbosity == 2:
-        print "the square of {} equals {}".format(args.square, answer)
-    elif args.verbosity == 1:
-        print "{}^2 == {}".format(args.square, answer)
-    else:
-        print answer
-        '''
-        
+   
