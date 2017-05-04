@@ -118,7 +118,6 @@ def redactIdeas(myString,idea):
     for word in synonyms:
         if word in word_dict.keys():
             actualWord = word_dict[word]
-            print(actualWord)
             myString = redactSentence(myString,actualWord)
     return myString
 
@@ -142,13 +141,11 @@ def redactGenders(myString):
         pattern = re.compile(r'(?<=\W)'+re.escape(i)+'(?=\W)',re.IGNORECASE)
         censorship_dict['genders']+=len(re.findall(i, myString))
         myString = re.sub(pattern,'*',myString)
-        print(myString)
     for i in male:
         pattern = re.compile(r'(?<=\W)'+re.escape(i)+'(?=\W)',re.IGNORECASE)
         #pattern = re.compile(r'(?<=[^|\W+])'+re.escape(i)+'(\W+|$)',re.IGNORECASE)
         censorship_dict['genders']+=len(re.findall(i, myString))
         myString = re.sub(pattern,'*',myString)
-        print(myString)
     return myString
     
     
@@ -298,12 +295,6 @@ concepts = []
 for j in args.concept:  # This is a place for a possible mistake
     concepts.extend(j)
 
-#Extracting the places to write statistics:
-stats = []
-if args.stats:
-    for j in args.stats:
-        stats.extend(j)
-
 
 #Dealing with html files
 if len(htmlFiles) > 0 :
@@ -371,9 +362,7 @@ if len(txtFiles) > 0 :
             writeTxt(current_file,outputLocation)
 
 #Write summary statistics
-if len(stats)>0:
-    for s in stats:
-        writeStats(s)
+writeStats(args.stats)
            
 
 
